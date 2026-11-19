@@ -14,5 +14,27 @@ services:
       interval: 2s
       retries: 20
 
+  migrate:
+    build: ./apps/api
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://hearback:hearback@db:5432/hearback
+    depends_on:
+      db:
+        condition: service_healthy        # wait until Postgres accepts connections
+
+  api:
+    build: ./apps/api
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://hearback:hearback@db:5432/hearback
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api/app:/app/app           # my code, live: edits reload without a rebuild
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:
