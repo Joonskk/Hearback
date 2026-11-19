@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: hearback
+          POSTGRES_PASSWORD: hearback
+          POSTGRES_DB: hearback
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hearback"
+          --health-interval 2s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+psycopg://hearback:hearback@localhost:5432/hearback
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Tests
+        run: uv run pytest -q
+
+  api-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Build API image
+        run: docker build apps/api
