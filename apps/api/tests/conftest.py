@@ -5,9 +5,11 @@ migrates it to the latest version, and drops it at the end. Dev data is never
 touched.
 """
 
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
+import jwt
 import pytest
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -73,3 +75,20 @@ def client(db: Session) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def make_token():
+    def _make(
+        sub: str = "sub-a",
+        email: str = "a@example.com",
+        *,
+        aud: str = settings.jwt_audience,
+        exp_in: int = 300,
+        secret: str = settings.jwt_secret,
+    ) -> str:
+        now = int(time.time())
+        payload = {"sub": sub, "email": email, "aud": aud, "iat": now, "exp": now + exp_in}
+        return jwt.encode(payload, secret, algorithm="HS256")
+
+    return _make
