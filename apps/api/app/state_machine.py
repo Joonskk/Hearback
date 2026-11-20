@@ -12,11 +12,13 @@ ALLOWED: dict[str, frozenset[str]] = {
     "stale": frozenset({"assessment", "interview", "offer", "rejected"}),
 }
 
+
 @dataclass(frozen=True)
 class TransitionResult:
     allowed: bool
     correction: bool = False
     reason: str | None = None
+
 
 def _is_normal_move(from_status: str, to_status: str, source: str) -> bool:
     if to_status == "stale" and source != "system":

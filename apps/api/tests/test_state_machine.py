@@ -33,6 +33,7 @@ BACKWARD_OR_FROM_FINAL = [
     ("rejected", "interview"),
 ]
 
+
 def test_rules_cover_every_status():
     assert set(ALLOWED) == set(APPLICATION_STATUSES)
 
