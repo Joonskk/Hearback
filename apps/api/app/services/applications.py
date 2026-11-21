@@ -63,7 +63,7 @@ def get_application(
     if application is None:
         raise APIError(404, "not_found", "Application not found")
     return application
-    
+
 
 def change_status(
     session: Session, user: User, application_id: uuid.UUID, data: StatusChange
