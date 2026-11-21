@@ -5,8 +5,6 @@ Hearback tracks job applications automatically. You log applications on the web 
 rejections, online assessments, interviews and offers, then updates each application's
 status and color. It also parses your resume into editable fields.
 
-I'm building it for my own Summer 2027 internship search.
-
 ## Status
 
 Phase 1 (foundation) in progress: FastAPI + PostgreSQL backend, Next.js web app,
