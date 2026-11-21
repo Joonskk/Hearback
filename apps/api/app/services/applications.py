@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.errors import APIError
 from app.models import Application, ApplicationEvent, Company, JobPosting, User
-from app.schemas import ApplicationCreate
+from app.schemas import ApplicationCreate, StatusChange
+from app.state_machine import can_transition
+
+from datetime import UTC, datetime
 
 
 def _find_or_create_company(session: Session, name: str) -> Company:
@@ -47,13 +50,54 @@ def create_application(session: Session, user: User, data: ApplicationCreate) ->
     return application
 
 
-def get_application(session: Session, user: User, application_id: uuid.UUID) -> Application:
-    application = session.scalar(
-        select(Application).where(
-            Application.id == application_id,
-            Application.user_id == user.id,
-        )
+def get_application(
+    session: Session, user: User, application_id: uuid.UUID, *, for_update: bool = False
+) -> Application:
+    query = select(Application).where(
+        Application.id == application_id,
+        Application.user_id == user.id,
     )
+    if for_update:
+        query = query.with_for_update()
+    application = session.scalar(query)
     if application is None:
         raise APIError(404, "not_found", "Application not found")
+    return application
+    
+
+def change_status(
+    session: Session, user: User, application_id: uuid.UUID, data: StatusChange
+) -> Application:
+    application = get_application(session, user, application_id, for_update=True)
+
+    result = can_transition(application.status, data.to_status, source="manual")
+    if not result.allowed:
+        raise APIError(
+            409,
+            "invalid_transition",
+            f"Can't move from {application.status} to {data.to_status}",
+        )
+
+    details: dict = {}
+    if result.correction:
+        details["correction"] = True
+    if data.note:
+        details["note"] = data.note
+
+    now = datetime.now(UTC)
+    application.events.append(
+        ApplicationEvent(
+            type="status_changed",
+            from_status=application.status,
+            to_status=data.to_status,
+            source="manual",
+            occurred_at=now,
+            details=details,
+        )
+    )
+    application.status = data.to_status
+    application.last_event_at = now
+    application.updated_at = now
+    session.commit()
+    session.refresh(application)
     return application
