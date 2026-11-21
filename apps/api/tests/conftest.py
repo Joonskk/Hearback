@@ -92,3 +92,12 @@ def make_token():
         return jwt.encode(payload, secret, algorithm="HS256")
 
     return _make
+
+
+@pytest.fixture
+def headers_for(make_token):
+    def _headers(sub: str = "sub-a") -> dict[str, str]:
+        token = make_token(sub=sub, email=f"{sub}@example.com")
+        return {"Authorization": f"Bearer {token}"}
+
+    return _headers

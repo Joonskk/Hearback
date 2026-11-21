@@ -58,3 +58,13 @@ class ApplicationOut(BaseModel):
 
 class ApplicationDetail(ApplicationOut):
     events: list[EventOut]
+
+
+ApplicationStatus = Literal["applied", "assessment", "interview", "offer", "rejected", "stale"]
+
+
+class StatusChange(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    to_status: ApplicationStatus
+    note: str | None = Field(default=None, max_length=2000)
