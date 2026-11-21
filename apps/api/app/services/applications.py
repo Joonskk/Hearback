@@ -1,6 +1,7 @@
 """Database work for applications. Routers call these; they never build queries themselves."""
 
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -10,8 +11,6 @@ from app.errors import APIError
 from app.models import Application, ApplicationEvent, Company, JobPosting, User
 from app.schemas import ApplicationCreate, StatusChange
 from app.state_machine import can_transition
-
-from datetime import UTC, datetime
 
 
 def _find_or_create_company(session: Session, name: str) -> Company:
