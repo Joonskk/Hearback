@@ -18,7 +18,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # Allowed values live in Python so the API, the state machine and the CHECK
 # constraints all share one list.
@@ -94,6 +94,7 @@ class JobPosting(TimestampMixin, Base):
     url: Mapped[str | None] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(20), server_default="manual")
     description: Mapped[str | None] = mapped_column(Text)
+    company: Mapped[Company] = relationship()
 
     __table_args__ = (
         CheckConstraint(_in_list("source", JOB_SOURCES), name="source_valid"),
@@ -116,6 +117,12 @@ class Application(TimestampMixin, Base):
     )
     notes: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    job_posting: Mapped[JobPosting] = relationship()
+    events: Mapped[list["ApplicationEvent"]] = relationship(
+        order_by="ApplicationEvent.occurred_at.desc()",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     __table_args__ = (
         CheckConstraint(_in_list("status", APPLICATION_STATUSES), name="status_valid"),
