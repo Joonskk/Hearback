@@ -60,6 +60,11 @@ class ApplicationDetail(ApplicationOut):
     events: list[EventOut]
 
 
+class ApplicationPage(BaseModel):
+    items: list[ApplicationOut]
+    next_cursor: str | None
+
+
 ApplicationStatus = Literal["applied", "assessment", "interview", "offer", "rejected", "stale"]
 
 
