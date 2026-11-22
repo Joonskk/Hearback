@@ -1,11 +1,12 @@
 """Database work for applications. Routers call these; they never build queries themselves."""
 
+import base64
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.errors import APIError
 from app.models import Application, ApplicationEvent, Company, JobPosting, User
@@ -100,3 +101,48 @@ def change_status(
     session.commit()
     session.refresh(application)
     return application
+
+
+def _encode_cursor(application: Application) -> str:
+    """Application → opaque cursor string (base64 of "applied_at|id")."""
+    raw = f"{application.applied_at.isoformat()}|{application.id}"
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+
+def _decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    """Cursor string → (applied_at, id). Raises 422 if it's malformed."""
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode()).decode()
+        applied_at, application_id = raw.split("|")
+        return datetime.fromisoformat(applied_at), uuid.UUID(application_id)
+    except ValueError as exc:
+        raise APIError(422, "invalid_cursor", "Invalid cursor") from exc
+
+
+def list_applications(
+    session: Session,
+    user: User,
+    *,
+    status: str | None = None,
+    cursor: str | None = None,
+    limit: int = 20,
+) -> tuple[list[Application], str | None]:
+    query = (
+        select(Application)
+        .where(Application.user_id == user.id)
+        .options(selectinload(Application.job_posting).selectinload(JobPosting.company))
+        .order_by(Application.applied_at.desc(), Application.id.desc())
+        .limit(limit + 1)
+    )
+    if status is not None:
+        query = query.where(Application.status == status)
+    if cursor is not None:
+        applied_at, last_id = _decode_cursor(cursor)
+        query = query.where(
+            tuple_(Application.applied_at, Application.id) < tuple_(applied_at, last_id)
+        )
+
+    rows = list(session.scalars(query))
+    items = rows[:limit]
+    next_cursor = _encode_cursor(items[-1]) if len(rows) > limit else None
+    return items, next_cursor
