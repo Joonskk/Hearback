@@ -11,6 +11,7 @@ from app.schemas import (
     ApplicationOut,
     ApplicationPage,
     ApplicationStatus,
+    ApplicationUpdate,
     StatusChange,
 )
 from app.services import applications as service
@@ -57,3 +58,18 @@ def change_status(
 ) -> ApplicationDetail:
     application = service.change_status(session, user, application_id, data)
     return ApplicationDetail.model_validate(application)
+
+
+@router.patch("/{application_id}")
+def update_application(
+    application_id: uuid.UUID, data: ApplicationUpdate, user: CurrentUserDep, session: SessionDep
+) -> ApplicationDetail:
+    application = service.update_application(session, user, application_id, data)
+    return ApplicationDetail.model_validate(application)
+
+
+@router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_application(
+    application_id: uuid.UUID, user: CurrentUserDep, session: SessionDep
+) -> None:
+    service.delete_application(session, user, application_id)
