@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.errors import APIError
 from app.models import Application, ApplicationEvent, Company, JobPosting, User
-from app.schemas import ApplicationCreate, StatusChange
+from app.schemas import ApplicationCreate, ApplicationUpdate, StatusChange
 from app.state_machine import can_transition
 
 
@@ -101,6 +101,35 @@ def change_status(
     session.commit()
     session.refresh(application)
     return application
+
+
+def update_application(
+    session: Session, user: User, application_id: uuid.UUID, data: ApplicationUpdate
+) -> Application:
+    application = get_application(session, user, application_id, for_update=True)
+    changes = data.model_dump(exclude_unset=True)
+    now = datetime.now(UTC)
+
+    if "notes" in changes and changes["notes"] != application.notes:
+        # A note isn't a reply from the company, so last_event_at (the stale timer) stays.
+        application.events.append(
+            ApplicationEvent(
+                type="note", source="manual", occurred_at=now, details={"notes": changes["notes"]}
+            )
+        )
+    for field, value in changes.items():
+        setattr(application, field, value)
+    application.updated_at = now
+
+    session.commit()
+    session.refresh(application)
+    return application
+
+
+def delete_application(session: Session, user: User, application_id: uuid.UUID) -> None:
+    application = get_application(session, user, application_id)
+    session.delete(application)
+    session.commit()
 
 
 def _encode_cursor(application: Application) -> str:

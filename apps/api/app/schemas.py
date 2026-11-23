@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import AliasPath, BaseModel, ConfigDict, Field
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
 
 class UserOut(BaseModel):
@@ -73,3 +73,19 @@ class StatusChange(BaseModel):
 
     to_status: ApplicationStatus
     note: str | None = Field(default=None, max_length=2000)
+
+
+class ApplicationUpdate(BaseModel):
+    # extra="forbid": unknown fields (like "status") are a 422, not silently ignored.
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    applied_at: datetime | None = None
+    notes: str | None = None
+
+    @field_validator("applied_at")
+    @classmethod
+    def applied_at_not_null(cls, value: datetime | None) -> datetime:
+        # Runs only when the field is sent. Leaving it out is fine; sending null is not.
+        if value is None:
+            raise ValueError("applied_at can't be null")
+        return value
