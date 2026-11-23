@@ -41,6 +41,18 @@ cd apps/api
 uv run pytest -q
 ```
 
+### Run the web app
+
+Requires Node 22+ and [pnpm](https://pnpm.io/).
+
+```bash
+cd apps/web
+cp .env.example .env.local
+pnpm install
+pnpm dev                       # http://localhost:3000
+pnpm lint && pnpm typecheck && pnpm test
+```
+
 ## Design
 
 See the Phase 1 design doc: https://docs.google.com/document/d/1HYYPfwelRg9yJr_nn5DDzfhxa5qFovhIThFm9gwEOOc/edit?usp=sharing
