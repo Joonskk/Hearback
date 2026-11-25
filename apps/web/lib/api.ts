@@ -1,5 +1,7 @@
 import "server-only";
 
+import { connection } from "next/server";
+
 import { auth } from "@/auth";
 import { ApiError, readResponse } from "@/lib/api-error";
 import { createApiToken } from "@/lib/api-token";
@@ -17,6 +19,9 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  // Mark this render as request-time before Auth.js re-encrypts the session cookie.
+  await connection();
+
   const session = await auth();
   if (session === null) {
     throw new ApiError(401, "not_signed_in", "Not signed in");
