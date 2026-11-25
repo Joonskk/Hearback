@@ -1,6 +1,13 @@
 import { Suspense } from "react";
 
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
+import { apiFetch } from "@/lib/api";
+
+type Me = {
+  id: string;
+  email: string;
+  name: string | null;
+};
 
 export default function Home() {
   return (
@@ -14,11 +21,11 @@ export default function Home() {
 }
 
 async function CurrentUser() {
-  const session = await auth();
+  const me = await apiFetch<Me>("/me");
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <p>Signed in as {session?.user.name}</p>
+      <p>Signed in as {me.email}</p>
       <form
         action={async () => {
           "use server";
