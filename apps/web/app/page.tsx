@@ -1,13 +1,8 @@
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { signOut } from "@/auth";
 import { apiFetch } from "@/lib/api";
-
-type Me = {
-  id: string;
-  email: string;
-  name: string | null;
-};
 
 export default function Home() {
   return (
@@ -20,12 +15,21 @@ export default function Home() {
   );
 }
 
+type Me = {
+  id: string;
+  email: string;
+  name: string | null;
+};
+
 async function CurrentUser() {
   const me = await apiFetch<Me>("/me");
 
   return (
     <div className="flex flex-col items-center gap-4">
       <p>Signed in as {me.email}</p>
+      <Link href="/applications" className="underline">
+        My applications
+      </Link>
       <form
         action={async () => {
           "use server";
